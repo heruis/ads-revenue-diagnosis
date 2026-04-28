@@ -1,0 +1,1 @@
+# Ad Revenue Diagnosis Framework\n\nInteractive website for diagnosing ad revenue drops — Industry Seminar II Case Study.\n\nLive site: https://heruis.github.io/ads-revenue-diagnosis\n
