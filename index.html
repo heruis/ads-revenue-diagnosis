@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ad Revenue Diagnosis Framework</title>
+  <style>
+    :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#222535;--border:#2e3247;--accent:#6c7cff;--accent2:#00d4aa;--accent3:#ff6b6b;--accent4:#ffd166;--text:#e8eaf6;--text-muted:#8890b0;--text-dim:#555e80;--radius:12px}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+    nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(15,17,23,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 2rem;height:60px}
+    .nav-logo{font-size:1rem;font-weight:700;color:var(--accent)}
+    .nav-links{display:flex;gap:1.5rem}
+    .nav-links a{color:var(--text-muted);text-decoration:none;font-size:.85rem;transition:color .2s}
+    .nav-links a:hover,.nav-links a.active{color:var(--accent)}
+    #progress-bar{position:fixed;top:60px;left:0;height:3px;background:var(--accent);width:0%;z-index:99;transition:width .1s}
+    .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 2rem 4rem;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(108,124,255,.12) 0%,transparent 70%)}
+    .hero-tag{display:inline-block;padding:4px 14px;background:rgba(108,124,255,.15);border:1px solid rgba(108,124,255,.3);border-radius:99px;font-size:.78rem;color:var(--accent);letter-spacing:.05em;text-transform:uppercase;margin-bottom:1.5rem}
+    .hero h1{font-size:clamp(2rem,5vw,3.6rem);font-weight:800;line-height:1.15;letter-spacing:-1.5px;margin-bottom:1.2rem}
+    .hero h1 span{color:var(--accent)}
+    .hero p{max-width:600px;color:var(--text-muted);font-size:1.1rem;margin-bottom:2.5rem}
+    .hero-cta{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center}
+    .btn{padding:12px 28px;border-radius:8px;font-size:.95rem;font-weight:600;cursor:pointer;text-decoration:none;transition:all .2s;display:inline-block}
+    .btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 24px rgba(108,124,255,.3)}
+    .btn-primary:hover{background:#7d8dff;transform:translateY(-1px)}
+    .btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+    .btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+    .hero-metrics{display:flex;gap:1.5rem;flex-wrap:wrap;justify-content:center;margin-top:3rem}
+    .metric-pill{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 20px;text-align:center;min-width:120px}
+    .metric-pill .value{font-size:1.6rem;font-weight:800;display:block}
+    .metric-pill .label{font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em}
+    .metric-pill.down .value{color:var(--accent3)}
+    .metric-pill.up .value{color:var(--accent2)}
+    section{padding:5rem 2rem}
+    .container{max-width:1000px;margin:0 auto}
+    .section-label{font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem}
+    .section-title{font-size:clamp(1.5rem,3vw,2.2rem);font-weight:800;letter-spacing:-.5px;margin-bottom:.75rem}
+    .section-sub{color:var(--text-muted);max-width:600px;margin-bottom:2.5rem;font-size:1rem}
+    .steps{display:flex;flex-direction:column;gap:1rem}
+    .step-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s}
+    .step-card:hover{border-color:var(--accent)}
+    .step-header{display:flex;align-items:center;gap:1rem;padding:1.25rem 1.5rem;cursor:pointer;user-select:none}
+    .step-num{width:36px;height:36px;border-radius:50%;background:rgba(108,124,255,.15);border:1.5px solid var(--accent);color:var(--accent);font-weight:800;font-size:.9rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .step-title-wrap{flex:1}
+    .step-title{font-weight:700;font-size:1rem}
+    .step-subtitle{color:var(--text-muted);font-size:.82rem;margin-top:2px}
+    .step-chevron{color:var(--text-dim);transition:transform .3s;font-size:1.1rem}
+    .step-card.open .step-chevron{transform:rotate(180deg)}
+    .step-body{display:none;padding:0 1.5rem 1.5rem;border-top:1px solid var(--border);padding-top:1.25rem}
+    .step-card.open .step-body{display:block}
+    .formula-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:1rem 1.5rem;margin:1rem 0;font-family:'Courier New',monospace;font-size:.95rem;color:var(--accent2);letter-spacing:.03em}
+    .table-wrap{overflow-x:auto;margin:1rem 0;border-radius:8px;border:1px solid var(--border)}
+    table{width:100%;border-collapse:collapse;font-size:.875rem}
+    th{background:var(--surface2);color:var(--text-muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;padding:10px 14px;text-align:left;font-weight:600;border-bottom:1px solid var(--border)}
+    td{padding:10px 14px;border-bottom:1px solid rgba(46,50,71,.5)}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:rgba(108,124,255,.04)}
+    .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:700;letter-spacing:.04em}
+    .badge-red{background:rgba(255,107,107,.15);color:var(--accent3)}
+    .badge-green{background:rgba(0,212,170,.15);color:var(--accent2)}
+    .badge-blue{background:rgba(108,124,255,.15);color:var(--accent)}
+    .badge-yellow{background:rgba(255,209,102,.15);color:var(--accent4)}
+    .val-down{color:var(--accent3);font-weight:700}
+    .val-up{color:var(--accent2);font-weight:700}
+    .callout{border-left:3px solid var(--accent);padding:.9rem 1.1rem;background:rgba(108,124,255,.07);border-radius:0 8px 8px 0;margin:1rem 0;font-size:.9rem}
+    .callout.warn{border-color:var(--accent4);background:rgba(255,209,102,.07)}
+    .callout.danger{border-color:var(--accent3);background:rgba(255,107,107,.07)}
+    .callout.success{border-color:var(--accent2);background:rgba(0,212,170,.07)}
+    .callout strong{display:block;margin-bottom:4px}
+    .flow{display:flex;flex-direction:column;align-items:center;margin:1.5rem 0}
+    .flow-node{width:100%;max-width:460px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.9rem 1.2rem;font-size:.88rem;text-align:center}
+    .flow-node .node-label{font-size:.68rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+    .flow-node .node-val{font-weight:700;color:var(--accent)}
+    .flow-arrow{width:2px;height:24px;background:var(--accent);opacity:.5;margin:0 auto}
+    .flow-fork{display:flex;gap:1.5rem;width:100%;justify-content:center}
+    .flow-branch{flex:1;max-width:210px;display:flex;flex-direction:column;align-items:center}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+    @media(max-width:640px){.grid-2{grid-template-columns:1fr}}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem}
+    .card-title{font-weight:700;font-size:.95rem;margin-bottom:.5rem}
+    .card-body{font-size:.875rem;color:var(--text-muted);line-height:1.7}
+    #diagnostic{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:2rem;margin-top:1.5rem}
+    .diag-q{font-weight:700;margin-bottom:1rem;font-size:1rem}
+    .diag-options{display:flex;flex-direction:column;gap:.6rem}
+    .diag-btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.85rem 1.2rem;text-align:left;cursor:pointer;font-size:.88rem;color:var(--text);transition:all .18s;width:100%}
+    .diag-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .diag-result{margin-top:1.5rem;padding:1.2rem;background:var(--surface2);border-radius:8px;border:1px solid var(--accent);font-size:.9rem}
+    .diag-result .res-title{font-weight:700;color:var(--accent);margin-bottom:.5rem}
+    .diag-back{margin-top:1rem;color:var(--text-muted);font-size:.82rem;cursor:pointer;text-decoration:underline;display:inline-block}
+    .compare-bars{display:flex;flex-direction:column;gap:.9rem;margin:1rem 0}
+    .cbar-row{display:flex;flex-direction:column;gap:4px}
+    .cbar-label{font-size:.8rem;color:var(--text-muted);display:flex;justify-content:space-between}
+    .cbar-track{height:10px;background:var(--surface2);border-radius:99px;overflow:hidden}
+    .cbar-fill{height:100%;border-radius:99px;width:0;transition:width 1.2s ease}
+    .timeline{display:flex;flex-direction:column;position:relative;padding-left:2rem}
+    .timeline::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:var(--border)}
+    .tl-item{position:relative;padding-bottom:1.5rem}
+    .tl-dot{position:absolute;left:-2rem;top:3px;width:16px;height:16px;border-radius:50%;border:2px solid var(--accent);background:var(--bg);z-index:1}
+    .tl-item.done .tl-dot{background:var(--accent2);border-color:var(--accent2)}
+    .tl-title{font-weight:700;font-size:.95rem}
+    .tl-body{color:var(--text-muted);font-size:.85rem;margin-top:4px}
+    .action-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-top:1rem}
+    .action-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;border-top:3px solid var(--accent)}
+    .action-card.orange{border-top-color:var(--accent4)}
+    .action-card.green{border-top-color:var(--accent2)}
+    .action-card.red{border-top-color:var(--accent3)}
+    .ac-icon{font-size:1.4rem;margin-bottom:.5rem}
+    .ac-title{font-weight:700;font-size:.9rem;margin-bottom:.4rem}
+    .ac-body{font-size:.8rem;color:var(--text-muted);line-height:1.6}
+    footer{text-align:center;padding:3rem 2rem;color:var(--text-dim);font-size:.8rem;border-top:1px solid var(--border)}
+    footer a{color:var(--accent);text-decoration:none}
+    .fade-in{opacity:0;transform:translateY(20px);transition:opacity .6s,transform .6s}
+    .fade-in.visible{opacity:1;transform:translateY(0)}
+  </style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo">&#128201; Ad Revenue Dx</div>
+  <div class="nav-links">
+    <a href="#observe">Observe</a>
+    <a href="#decompose">Decompose</a>
+    <a href="#root-cause">Root Cause</a>
+    <a href="#inference">Inference</a>
+    <a href="#actions">Actions</a>
+    <a href="#verify">Verify</a>
+  </div>
+</nav>
+<div id="progress-bar"></div>
+
+<div class="hero">
+  <div class="hero-tag">Data Analytics &middot; Case Study Framework</div>
+  <h1>Ad Revenue Dropped.<br/><span>How Do You Diagnose It?</span></h1>
+  <p>A step-by-step interactive framework for investigating, diagnosing, and resolving unexpected ad revenue declines &mdash; built from real auction-level thinking.</p>
+  <div class="hero-cta">
+    <a href="#observe" class="btn btn-primary">Start Diagnosis &rarr;</a>
+    <a href="#tool" class="btn btn-outline">Interactive Tool</a>
+  </div>
+  <div class="hero-metrics">
+    <div class="metric-pill down"><span class="value">-31%</span><span class="label">Revenue Drop</span></div>
+    <div class="metric-pill down"><span class="value">-55%</span><span class="label">CTR Decline</span></div>
+    <div class="metric-pill up"><span class="value">+26%</span><span class="label">CPC (new fmt)</span></div>
+    <div class="metric-pill down"><span class="value">-56%</span><span class="label">Win Rate Drop</span></div>
+  </div>
+</div>
+
+<section id="observe">
+  <div class="container fade-in">
+    <div class="section-label">Step 01</div>
+    <div class="section-title">Observe the Drop</div>
+    <div class="section-sub">Start with the dashboard. Establish the baseline and quantify the problem before diving into data.</div>
+    <div class="callout danger"><strong>Signal Received:</strong> Total ad revenue dropped significantly this month. Before &rarr; After: <strong>$7,600 &rarr; $5,252</strong> (&minus;31%). Time to investigate.</div>
+    <div class="formula-box">Revenue = Impressions &times; CTR &times; Avg CPC = Clicks &times; Avg CPC</div>
+    <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:1rem">Check aggregated dashboards first &mdash; they show the high-level picture but lack granularity (no auction IDs, bid prices, or is_winner flags).</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Period</th><th>Format</th><th>Impressions</th><th>CTR</th><th>Clicks</th><th>Avg CPC</th><th>Revenue</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-blue">Before</span></td><td>Old</td><td>100,000</td><td>2.00%</td><td>2,000</td><td>$3.80</td><td><strong>$7,600</strong></td><td>&mdash;</td></tr>
+          <tr><td><span class="badge badge-yellow">After</span></td><td>Old</td><td>35,000</td><td>2.00%</td><td>700</td><td>$3.80</td><td>$2,660</td><td class="val-down">&#9660; &minus;65%</td></tr>
+          <tr><td><span class="badge badge-yellow">After</span></td><td>New</td><td>60,000</td><td class="val-down">0.90%</td><td>540</td><td class="val-up">$4.80</td><td>$2,592</td><td>&mdash;</td></tr>
+          <tr style="background:rgba(255,107,107,.05)"><td><span class="badge badge-red">After Total</span></td><td>All</td><td>95,000</td><td>&mdash;</td><td>1,240</td><td>&mdash;</td><td><strong class="val-down">$5,252</strong></td><td class="val-down">&#9660; &minus;31%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn" style="margin-top:1.2rem"><strong>Key Observation:</strong> Impressions barely changed (100K &rarr; 95K), but clicks fell from 2,000 &rarr; 1,240. The effective CTR collapsed. Higher CPC on the new format does not compensate for the click volume loss.</div>
+  </div>
+</section>
+
+<section id="decompose" style="background:var(--surface)">
+  <div class="container fade-in">
+    <div class="section-label">Step 02</div>
+    <div class="section-title">Decompose the Metrics</div>
+    <div class="section-sub">Revenue is a product of multiple components. Identify which lever moved &mdash; and by how much.</div>
+    <div class="flow">
+      <div class="flow-node"><div class="node-label">Revenue (Before &rarr; After)</div><div class="node-val">$7,600 &rarr; $5,252 (&minus;31%)</div></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-fork">
+        <div class="flow-branch"><div class="flow-arrow"></div><div class="flow-node"><div class="node-label">Impressions</div><div class="node-val" style="color:var(--accent4)">100K &rarr; 95K (&minus;5%)</div><div style="font-size:.75rem;color:var(--text-dim);margin-top:4px">Minimal impact</div></div></div>
+        <div class="flow-branch"><div class="flow-arrow"></div><div class="flow-node"><div class="node-label">Effective CTR</div><div class="node-val" style="color:var(--accent3)">2.0% &rarr; 1.31% (&minus;35%)</div><div style="font-size:.75rem;color:var(--text-dim);margin-top:4px">&#9888; Primary driver</div></div></div>
+        <div class="flow-branch"><div class="flow-arrow"></div><div class="flow-node"><div class="node-label">Avg CPC</div><div class="node-val" style="color:var(--accent2)">$3.80 &rarr; ~$4.23</div><div style="font-size:.75rem;color:var(--text-dim);margin-top:4px">Partly offsets</div></div></div>
+      </div>
+    </div>
+    <div class="compare-bars" style="margin-top:2rem">
+      <div class="cbar-row"><div class="cbar-label"><span>Impressions</span><span>100K &rarr; 95K</span></div><div class="cbar-track"><div class="cbar-fill" data-w="95" style="background:var(--accent4)"></div></div></div>
+      <div class="cbar-row"><div class="cbar-label"><span>Clicks</span><span>2,000 &rarr; 1,240</span></div><div class="cbar-track"><div class="cbar-fill" data-w="62" style="background:var(--accent3)"></div></div></div>
+      <div class="cbar-row"><div class="cbar-label"><span>CTR (effective)</span><span>2.00% &rarr; 1.31%</span></div><div class="cbar-track"><div class="cbar-fill" data-w="65" style="background:var(--accent3)"></div></div></div>
+      <div class="cbar-row"><div class="cbar-label"><span>Revenue</span><span>$7,600 &rarr; $5,252</span></div><div class="cbar-track"><div class="cbar-fill" data-w="69" style="background:var(--accent)"></div></div></div>
+    </div>
+    <div class="callout" style="margin-top:1.5rem"><strong>Finding:</strong> The CTR drop is the dominant cause. A new ad format with far lower CTR (0.90% vs 2.00%) captured 60K of 95K total impressions, collapsing effective CTR despite higher CPC.</div>
+  </div>
+</section>
+
+<section id="data-sources">
+  <div class="container fade-in">
+    <div class="section-label">Step 03</div>
+    <div class="section-title">Trace the Data Sources</div>
+    <div class="section-sub">Aggregated dashboards lack granularity. Trace lineage from dashboard &rarr; tables &rarr; raw auction logs.</div>
+    <div class="grid-2">
+      <div class="card"><div class="card-title">&#128193; Layer 1: Aggregated Dashboards</div><div class="card-body"><ul style="padding-left:1.2rem;line-height:2"><li><strong>Outcome Dashboard</strong> &mdash; by user cohort</li><li><strong>Funnel Dashboard</strong> &mdash; by ad format</li></ul><div class="callout warn" style="margin-top:.8rem;font-size:.8rem">No auction_id, bid, price, or is_winner. Cannot rebuild auction-level metrics.</div></div></div>
+      <div class="card"><div class="card-title">&#128269; Layer 2: Tables Behind Dashboards</div><div class="card-body"><ul style="padding-left:1.2rem;line-height:2"><li><code style="color:var(--accent2)">outcome_fact</code> &mdash; dt, user_id</li><li><code style="color:var(--accent2)">funnel_fact</code> &mdash; dt, ad_format</li><li><code style="color:var(--accent2)">user_dim</code>, <code style="color:var(--accent2)">ad_dim</code></li></ul><div class="callout" style="margin-top:.8rem;font-size:.8rem">Different group-bys: cannot join directly to reconstruct auction-level data.</div></div></div>
+    </div>
+    <div class="card" style="margin-top:1.25rem">
+      <div class="card-title">&#9881; Layer 3: Reconstructed Auction-Level Dataset</div>
+      <div class="card-body">
+        <p style="margin-bottom:.8rem">Join raw event logs to build the full picture:</p>
+        <div style="display:flex;flex-wrap:wrap;gap:.6rem;font-size:.8rem">
+          <span class="badge badge-blue">auction_log (bid, pCTR, score, is_winner, price)</span>
+          <span class="badge badge-green">impression_log</span>
+          <span class="badge badge-green">click_log</span>
+          <span class="badge badge-yellow">conversion_log</span>
+          <span class="badge badge-blue">user_dim</span>
+          <span class="badge badge-blue">ad_dim (ad_format, surface)</span>
+          <span class="badge badge-blue">country_dim &amp; surface_dim</span>
+        </div>
+        <div class="formula-box" style="margin-top:1rem;font-size:.82rem">Final Table: (dt, user_id, advertiser_id, ad_id, auction_id, country, surface, ad_format, bid, pCTR, pCVR, score, is_winner, price, impressions, clicks...)</div>
+        <p style="color:var(--accent2);font-size:.82rem;margin-top:.6rem">&#10004; Enables flexible analysis at auction level across users, ads, geo, surfaces, and formats.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="root-cause" style="background:var(--surface)">
+  <div class="container fade-in">
+    <div class="section-label">Step 04</div>
+    <div class="section-title">Root Cause: Ad Format Cannibalization</div>
+    <div class="section-sub">The new ad format wins more auctions but has a much lower CTR &mdash; cannibalizing old-format traffic and pulling down revenue.</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Period</th><th>Format</th><th>Win Rate</th><th>Avg Bid</th><th>pCTR</th><th>Score (Bid &times; pCTR)</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-blue">Before</span></td><td>Old</td><td class="val-up">80%</td><td>4.1</td><td>2.00%</td><td><strong>0.082</strong></td></tr>
+          <tr><td><span class="badge badge-yellow">After</span></td><td>Old</td><td class="val-down">35%</td><td>4.1</td><td>2.00%</td><td><strong>0.082</strong></td></tr>
+          <tr style="background:rgba(108,124,255,.05)"><td><span class="badge badge-yellow">After</span></td><td><strong>New</strong></td><td>60%</td><td class="val-up">5.4</td><td class="val-down">1.60%</td><td><strong class="val-up">0.086</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout danger" style="margin-top:1.2rem"><strong>Auction Insight:</strong> Score = Bid &times; pCTR. New format: 5.4 &times; 0.016 = 0.086 vs old: 4.1 &times; 0.020 = 0.082. Higher score wins more auctions &mdash; but actual CTR is only 0.9%. Old format win rate collapses 80% &rarr; 35%.</div>
+    <div class="steps" style="margin-top:1.5rem">
+      <div class="step-card open">
+        <div class="step-header" onclick="toggleStep(this)"><div class="step-num">A</div><div class="step-title-wrap"><div class="step-title">Why did the new format win more auctions?</div><div class="step-subtitle">Higher bid &times; pCTR score beats old format</div></div><div class="step-chevron">&#9662;</div></div>
+        <div class="step-body"><p>Winner = highest Score = Bid &times; pCTR. New format: 5.4 &times; 0.016 = 0.0864. Old format: 4.1 &times; 0.020 = 0.0820. New format wins ~60% of auctions; old format collapses to 35% win rate.</p><div class="formula-box">New Score: 5.4 &times; 0.016 = 0.0864<br/>Old Score: 4.1 &times; 0.020 = 0.0820</div></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header" onclick="toggleStep(this)"><div class="step-num">B</div><div class="step-title-wrap"><div class="step-title">Why is actual CTR so much lower?</div><div class="step-subtitle">pCTR model is miscalibrated &mdash; overestimates click probability</div></div><div class="step-chevron">&#9662;</div></div>
+        <div class="step-body"><p>New format pCTR used in auction (1.60%) is much higher than actual CTR (0.90%). The model overestimates. If pCTR = actual CTR: 5.4 &times; 0.009 = 0.049 &mdash; far below old format 0.082. The new format would lose most auctions.</p><div class="callout warn" style="margin-top:.8rem">This calibration gap is the core technical root cause. Fix: retrain pCTR model with real click feedback from the new format.</div></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header" onclick="toggleStep(this)"><div class="step-num">C</div><div class="step-title-wrap"><div class="step-title">Why didn't higher CPC save revenue?</div><div class="step-subtitle">Higher CPC &times; far fewer clicks = net revenue loss</div></div><div class="step-chevron">&#9662;</div></div>
+        <div class="step-body"><p>Per 100,000 impressions:</p><div class="formula-box">Old format: 100K &times; 2.00% &times; $3.80 = $7,600<br/>New format: 100K &times; 0.90% &times; $4.80 = $4,320<br/>Net loss per 100K impressions: &minus;$3,280 (&minus;43%)</div><p style="margin-top:.8rem;color:var(--text-muted);font-size:.88rem">CPC is not the right north star. Revenue per Mille (RPM) is the correct metric &mdash; it captures both dimensions.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="inference">
+  <div class="container fade-in">
+    <div class="section-label">Step 05</div>
+    <div class="section-title">Building Causal Inference</div>
+    <div class="section-sub">Correlation &ne; causation. Use a rigorous framework to attribute revenue decline to the new ad format.</div>
+    <div class="timeline">
+      <div class="tl-item done"><div class="tl-dot"></div><div class="tl-title">Establish Temporal Order</div><div class="tl-body">Confirm new format launch preceded the revenue drop. Find the inflection point in time-series data.</div></div>
+      <div class="tl-item done"><div class="tl-dot"></div><div class="tl-title">Check for Confounders</div><div class="tl-body">Seasonality, competitor activity, advertiser budget changes, algorithm updates? Rule out by slicing by country, surface, and user cohort.</div></div>
+      <div class="tl-item done"><div class="tl-dot"></div><div class="tl-title">Segment Analysis: Unaffected Surfaces</div><div class="tl-body">Find surfaces where the new format was NOT launched. Do they show the same drop? If not, new format is the likely cause.</div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-title">A/B Test / Holdout Analysis</div><div class="tl-body">Identify a holdout group &mdash; users who only saw the old format. Compare revenue-per-impression to the treatment group for the cleanest causal estimate.</div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-title">Difference-in-Differences (DiD)</div><div class="tl-body">Compare revenue trajectory of surfaces that got the new format vs those that did not, before and after launch. DiD isolates the causal effect.</div></div>
+      <div class="tl-item"><div class="tl-dot"></div><div class="tl-title">Quantify the Effect</div><div class="tl-body">Estimate: what would revenue have been without the new format? Attributable impact &asymp; &minus;$2,348 (&minus;31%) in this case.</div></div>
+    </div>
+    <div class="callout success" style="margin-top:1.5rem"><strong>Causal Chain:</strong> New format launch &rarr; Wins more auctions (higher score) &rarr; Old format loses impressions (80% &rarr; 35% win rate) &rarr; New format has much lower actual CTR (0.9% vs 2.0%) &rarr; Clicks drop (2,000 &rarr; 1,240) &rarr; Revenue declines ($7,600 &rarr; $5,252).</div>
+  </div>
+</section>
+
+<section id="actions" style="background:var(--surface)">
+  <div class="container fade-in">
+    <div class="section-label">Step 06</div>
+    <div class="section-title">Recommended Actions</div>
+    <div class="section-sub">With root cause established, what levers can the team pull?</div>
+    <div class="action-cards">
+      <div class="action-card"><div class="ac-icon">&#127919;</div><div class="ac-title">Recalibrate pCTR Model</div><div class="ac-body">New format pCTR (1.6%) overestimates actual CTR (0.9%). Retrain with real click feedback so auction scores reflect true engagement.</div></div>
+      <div class="action-card orange"><div class="ac-icon">&#9878;&#65039;</div><div class="ac-title">Apply Format Discount</div><div class="ac-body">Introduce a quality-adjusted score discount for new formats during calibration, or set a minimum CTR threshold for auction eligibility.</div></div>
+      <div class="action-card green"><div class="ac-icon">&#129514;</div><div class="ac-title">Improve Format Quality</div><div class="ac-body">Work with design/product to improve UX. A/B test creatives, placements, and targeting to close the pCTR vs actual CTR gap.</div></div>
+      <div class="action-card red"><div class="ac-icon">&#128202;</div><div class="ac-title">Use RPM as North Star</div><div class="ac-body">Adopt Revenue per Mille (RPM) as primary auction health metric. Captures both CPC and CTR; prevents format-mixing distortions.</div></div>
+      <div class="action-card"><div class="ac-icon">&#127758;</div><div class="ac-title">Staged Rollout</div><div class="ac-body">Limit new format to surfaces where it performs better. Use holdout groups to gather causal evidence before broader deployment.</div></div>
+      <div class="action-card orange"><div class="ac-icon">&#128276;</div><div class="ac-title">Revenue Guardrails</div><div class="ac-body">Automated alerts for RPM drops &gt;5% during any new format launch. Gate full rollouts on passing a revenue-neutral threshold.</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="verify">
+  <div class="container fade-in">
+    <div class="section-label">Step 07</div>
+    <div class="section-title">Verify Impact of Actions</div>
+    <div class="section-sub">Every fix needs a measurement plan. How do we know actions worked and caused no side effects?</div>
+    <div class="steps">
+      <div class="step-card open">
+        <div class="step-header" onclick="toggleStep(this)"><div class="step-num">1</div><div class="step-title-wrap"><div class="step-title">Define Primary and Guardrail Metrics</div><div class="step-subtitle">What to optimize, and what must not regress</div></div><div class="step-chevron">&#9662;</div></div>
+        <div class="step-body">
+          <div class="grid-2" style="margin-top:.5rem">
+            <div><p style="font-size:.8rem;color:var(--accent2);font-weight:700;margin-bottom:.5rem">Primary Metrics</p><ul style="font-size:.83rem;color:var(--text-muted);padding-left:1.2rem;line-height:1.9"><li>Total Ad Revenue ($)</li><li>RPM (Revenue / 1,000 impressions)</li><li>Effective CTR (blended)</li></ul></div>
+            <div><p style="font-size:.8rem;color:var(--accent4);font-weight:700;margin-bottom:.5rem">Guardrail Metrics</p><ul style="font-size:.83rem;color:var(--text-muted);padding-left:1.2rem;line-height:1.9"><li>Advertiser ROI</li><li>User experience signals</li><li>Total impressions served</li></ul></div>
+          </div>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-header" onclick="toggleStep(this)"><div class="step-num">2</div><div class="step-title-wrap"><div class="step-title">Run a Holdout A/B Test</div><div class="step-subtitle">Controlled experiment to measure the fix's causal impact</div></div><div class="step-chevron">&#9662;</div></div>
+        <div class="step-body"><ul style="font-size:.85rem;color:var(--text-muted);padding-left:1.2rem;margin-top:.6rem;line-height:1.9"><li><strong style="color:var(--text)">Control:</strong> Old system (overestimated pCTR)</li><li><strong style="color:var(--text)">Treatment:</strong> New system (recalibrated pCTR)</li><li>Run for at least 2 weeks; measure RPM, CTR, Revenue</li><li>Check statistical significance (p &lt; 0.05)</li></ul></div>
+      </div>
+      <div class="step-card">
+        <div class="step-header" onclick="toggleStep(this)"><div class="step-num">3</div><div class="step-title-wrap"><div class="step-title">Monitor Post-Launch Dashboards</div><div class="step-subtitle">Watch metrics day-over-day after full rollout</div></div><div class="step-chevron">&#9662;</div></div>
+        <div class="step-body"><ul style="font-size:.85rem;color:var(--text-muted);padding-left:1.2rem;margin-top:.6rem;line-height:1.9"><li>Daily RPM by surface and ad format</li><li>Win rate rebalance: old vs new format</li><li>pCTR vs actual CTR ratio per format (target: converge to 1.0)</li><li>Revenue anomaly alerts if drop &gt;5%</li></ul><div class="callout success" style="margin-top:.8rem;font-size:.82rem">Success: old format win rate recovers to ~60&ndash;70%, effective CTR returns to ~1.8&ndash;2.0%, revenue recovers within 2&ndash;3 weeks.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tool" style="background:var(--surface)">
+  <div class="container fade-in">
+    <div class="section-label">Interactive</div>
+    <div class="section-title">Diagnosis Decision Tree</div>
+    <div class="section-sub">Walk through the diagnostic flow yourself &mdash; answer questions to identify the likely root cause of your revenue drop.</div>
+    <div id="diagnostic"><div id="diag-content"></div></div>
+  </div>
+</section>
+
+<section id="summary">
+  <div class="container fade-in">
+    <div class="section-label">TL;DR</div>
+    <div class="section-title">Full Diagnosis Summary</div>
+    <div class="section-sub">The complete story from signal to root cause to fix.</div>
+    <div class="card">
+      <div style="display:flex;flex-direction:column;gap:1rem">
+        <div style="display:flex;gap:1rem;align-items:flex-start"><span style="font-size:1.4rem">&#128201;</span><div><div style="font-weight:700;margin-bottom:3px">Signal</div><div style="color:var(--text-muted);font-size:.88rem">Total ad revenue dropped 31% ($7,600 &rarr; $5,252). Impressions barely changed.</div></div></div>
+        <div style="display:flex;gap:1rem;align-items:flex-start"><span style="font-size:1.4rem">&#128269;</span><div><div style="font-weight:700;margin-bottom:3px">Decomposition</div><div style="color:var(--text-muted);font-size:.88rem">Effective CTR fell 2.0% &rarr; 1.31% (&minus;35%). CPC rose for the new format but could not compensate for click volume collapse.</div></div></div>
+        <div style="display:flex;gap:1rem;align-items:flex-start"><span style="font-size:1.4rem">&#9881;&#65039;</span><div><div style="font-weight:700;margin-bottom:3px">Root Cause</div><div style="color:var(--text-muted);font-size:.88rem">New ad format wins auctions via higher bid &times; pCTR score (0.086 vs 0.082), but actual CTR is only 0.9% vs 2.0% &mdash; pCTR is miscalibrated. Old format win rate collapses 80% &rarr; 35%.</div></div></div>
+        <div style="display:flex;gap:1rem;align-items:flex-start"><span style="font-size:1.4rem">&#129504;</span><div><div style="font-weight:700;margin-bottom:3px">Causal Inference</div><div style="color:var(--text-muted);font-size:.88rem">Use DiD or holdout comparing surfaces with vs without the new format. Rule out confounders. Quantify attributable impact.</div></div></div>
+        <div style="display:flex;gap:1rem;align-items:flex-start"><span style="font-size:1.4rem">&#128736;&#65039;</span><div><div style="font-weight:700;margin-bottom:3px">Fix</div><div style="color:var(--text-muted);font-size:.88rem">Recalibrate pCTR model. Apply temporary score discount. Adopt RPM as north-star. Set revenue guardrails for future format launches.</div></div></div>
+        <div style="display:flex;gap:1rem;align-items:flex-start"><span style="font-size:1.4rem">&#10003;</span><div><div style="font-weight:700;margin-bottom:3px">Verification</div><div style="color:var(--text-muted);font-size:.88rem">A/B test after fix. Monitor old-format win rate recovery, effective CTR, daily RPM. Success = win rate &gt;60%, CTR &gt;1.8%, revenue recovery within 2&ndash;3 weeks.</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>Industry Seminar II &mdash; Ad Revenue Diagnosis Framework</p>
+  <p style="margin-top:.4rem"><a href="#observe">Back to top &uarr;</a></p>
+</footer>
+
+<script>
+function toggleStep(h){h.parentElement.classList.toggle('open')}
+
+window.addEventListener('scroll',()=>{
+  const el=document.documentElement;
+  document.getElementById('progress-bar').style.width=(el.scrollTop/(el.scrollHeight-el.clientHeight)*100)+'%';
+});
+
+new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')});
+},{threshold:.08}).observe&&document.querySelectorAll('.fade-in').forEach(el=>{
+  new IntersectionObserver((en)=>en.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.08}).observe(el);
+});
+
+const navLinks=document.querySelectorAll('.nav-links a');
+window.addEventListener('scroll',()=>{
+  let cur='';
+  document.querySelectorAll('section[id]').forEach(s=>{if(window.scrollY>=s.offsetTop-100)cur=s.id});
+  navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur));
+});
+
+setTimeout(()=>{
+  document.querySelectorAll('.cbar-fill[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
+},500);
+
+const tree={
+  start:{q:'Which metric dropped most significantly?',opts:[
+    {label:'Total Impressions fell sharply',next:'impressions_drop'},
+    {label:'CTR declined (fewer clicks per impression)',next:'ctr_drop'},
+    {label:'CPC declined (advertisers paying less per click)',next:'cpc_drop'},
+    {label:'Not sure — all metrics look off',next:'decompose_first'}
+  ]},
+  impressions_drop:{q:'Did impressions drop uniformly across all surfaces and formats?',opts:[
+    {label:'Yes — all surfaces down',next:'r_traffic_loss'},
+    {label:'No — specific surface or geo dropped',next:'r_surface_issue'}
+  ]},
+  ctr_drop:{q:'Did the mix of ad formats change around the same time?',opts:[
+    {label:'Yes — a new format was launched',next:'r_cannibalization'},
+    {label:'No — same formats, CTR just fell',next:'r_creative_decay'},
+    {label:'Unsure — no format-level data available',next:'r_need_format_data'}
+  ]},
+  cpc_drop:{q:'Did advertiser budgets or auction competition change?',opts:[
+    {label:'Fewer advertisers or lower bids',next:'r_auction_pressure'},
+    {label:'Same advertisers but lower clearing prices',next:'r_pctrl_inflate'}
+  ]},
+  decompose_first:{q:'Revenue = Impressions x CTR x CPC. Which changed most vs prior period?',opts:[
+    {label:'Impressions fell most',next:'impressions_drop'},
+    {label:'CTR fell most',next:'ctr_drop'},
+    {label:'CPC fell most',next:'cpc_drop'}
+  ]},
+  r_cannibalization:{result:true,title:'Root Cause: New Format Cannibalization',body:'A new ad format wins auctions with a higher bid x pCTR score, displacing the old format. But actual CTR is much lower — fewer clicks per impression despite higher CPC.<br/><br/><strong>Actions:</strong> Recalibrate pCTR model; apply score discount; use RPM as north star; run holdout experiment to confirm causal attribution.'},
+  r_traffic_loss:{result:true,title:'Root Cause: Platform Traffic Decline',body:'Overall user traffic is down. Could be seasonal, a product change reducing ad inventory, or an external event.<br/><br/><strong>Actions:</strong> Check DAU/session metrics, compare to same period last year, check if surface changes reduced ad slots.'},
+  r_surface_issue:{result:true,title:'Root Cause: Surface-Specific Issue',body:'A specific surface, geography, or user segment lost impressions — suggests a targeting, eligibility, or product rollout issue.<br/><br/><strong>Actions:</strong> Slice impressions by surface x country x ad_format. Identify the outlier segment.'},
+  r_creative_decay:{result:true,title:'Root Cause: Creative or Audience Fatigue',body:'CTR fell without a format change — ad creatives are stale or audience targeting has drifted.<br/><br/><strong>Actions:</strong> Check impression frequency per user, refresh creative assets, review audience targeting overlap.'},
+  r_need_format_data:{result:true,title:'Action Needed: Get Format-Level Data',body:'Trace back to raw data. Reconstruct the auction-level dataset (join auction_log + impression_log + ad_dim) and segment CTR by ad_format x surface. Look for format mix shifts over time.'},
+  r_auction_pressure:{result:true,title:'Root Cause: Reduced Auction Competition',body:'Fewer advertisers or lower bids reduce the auction clearing price.<br/><br/><strong>Actions:</strong> Check auction fill rate, average bidders per auction, whether large advertisers reduced spend. Consider expanding supply or adjusting floor prices.'},
+  r_pctrl_inflate:{result:true,title:'Root Cause: pCTR Model Drift',body:'pCTR was overestimated then corrected downward, lowering scores and prices. Or a model update changed calibration.<br/><br/><strong>Actions:</strong> Compare pCTR vs actual CTR over time. Review recent model updates.'}
+};
+
+function renderDiag(nodeId){
+  const node=tree[nodeId];
+  const el=document.getElementById('diag-content');
+  if(node.result){
+    el.innerHTML='<div class="diag-result"><div class="res-title">'+node.title+'</div><div style="font-size:.88rem;color:var(--text-muted);line-height:1.7">'+node.body+'</div></div><div class="diag-back" onclick="renderDiag(\'start\')">&#8592; Start over</div>';
+  }else{
+    el.innerHTML='<div class="diag-q">'+node.q+'</div><div class="diag-options">'+node.opts.map(o=>'<button class="diag-btn" onclick="renderDiag(\''+o.next+'\')">' +o.label+'</button>').join('')+'</div>'+(nodeId!=='start'?'<div class="diag-back" onclick="renderDiag(\'start\')">&#8592; Start over</div>':'');
+  }
+}
+renderDiag('start');
+<\/script>
+</body>
+</html>
