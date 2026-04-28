@@ -37,6 +37,9 @@
     .section-label{font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem}
     .section-title{font-size:clamp(1.5rem,3vw,2.2rem);font-weight:800;letter-spacing:-.5px;margin-bottom:.75rem}
     .section-sub{color:var(--text-muted);max-width:600px;margin-bottom:2.5rem;font-size:1rem}
+    /* FIXED: use keyframe animation instead of JS observer so content always appears */
+    @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    .fade-in{animation:fadeUp .55s ease both}
     .steps{display:flex;flex-direction:column;gap:1rem}
     .step-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s}
     .step-card:hover{border-color:var(--accent)}
@@ -110,8 +113,6 @@
     .ac-body{font-size:.8rem;color:var(--text-muted);line-height:1.6}
     footer{text-align:center;padding:3rem 2rem;color:var(--text-dim);font-size:.8rem;border-top:1px solid var(--border)}
     footer a{color:var(--accent);text-decoration:none}
-    .fade-in{opacity:0;transform:translateY(20px);transition:opacity .6s,transform .6s}
-    .fade-in.visible{opacity:1;transform:translateY(0)}
   </style>
 </head>
 <body>
@@ -247,7 +248,7 @@
       </div>
       <div class="step-card">
         <div class="step-header" onclick="toggleStep(this)"><div class="step-num">C</div><div class="step-title-wrap"><div class="step-title">Why didn't higher CPC save revenue?</div><div class="step-subtitle">Higher CPC &times; far fewer clicks = net revenue loss</div></div><div class="step-chevron">&#9662;</div></div>
-        <div class="step-body"><p>Per 100,000 impressions:</p><div class="formula-box">Old format: 100K &times; 2.00% &times; $3.80 = $7,600<br/>New format: 100K &times; 0.90% &times; $4.80 = $4,320<br/>Net loss per 100K impressions: &minus;$3,280 (&minus;43%)</div><p style="margin-top:.8rem;color:var(--text-muted);font-size:.88rem">CPC is not the right north star. Revenue per Mille (RPM) is the correct metric &mdash; it captures both dimensions.</p></div>
+        <div class="step-body"><p>Per 100,000 impressions:</p><div class="formula-box">Old format: 100K &times; 2.00% &times; $3.80 = $7,600<br/>New format: 100K &times; 0.90% &times; $4.80 = $4,320<br/>Net loss per 100K impressions: &minus;$3,280 (&minus;43%)</div><p style="margin-top:.8rem;color:var(--text-muted);font-size:.88rem">CPC is not the right north star. Revenue per Mille (RPM) captures both CPC and CTR together.</p></div>
       </div>
     </div>
   </div>
@@ -342,7 +343,7 @@
 
 <footer>
   <p>Industry Seminar II &mdash; Ad Revenue Diagnosis Framework</p>
-  <p style="margin-top:.4rem"><a href="#observe">Back to top &uarr;</a></p>
+  <p style="margin-top:.4rem"><a href="#">Back to top &uarr;</a></p>
 </footer>
 
 <script>
@@ -351,24 +352,14 @@ function toggleStep(h){h.parentElement.classList.toggle('open')}
 window.addEventListener('scroll',()=>{
   const el=document.documentElement;
   document.getElementById('progress-bar').style.width=(el.scrollTop/(el.scrollHeight-el.clientHeight)*100)+'%';
-});
-
-new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')});
-},{threshold:.08}).observe&&document.querySelectorAll('.fade-in').forEach(el=>{
-  new IntersectionObserver((en)=>en.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.08}).observe(el);
-});
-
-const navLinks=document.querySelectorAll('.nav-links a');
-window.addEventListener('scroll',()=>{
   let cur='';
   document.querySelectorAll('section[id]').forEach(s=>{if(window.scrollY>=s.offsetTop-100)cur=s.id});
-  navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur));
+  document.querySelectorAll('.nav-links a').forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+cur));
 });
 
 setTimeout(()=>{
   document.querySelectorAll('.cbar-fill[data-w]').forEach(el=>el.style.width=el.dataset.w+'%');
-},500);
+},300);
 
 const tree={
   start:{q:'Which metric dropped most significantly?',opts:[
@@ -396,12 +387,12 @@ const tree={
     {label:'CPC fell most',next:'cpc_drop'}
   ]},
   r_cannibalization:{result:true,title:'Root Cause: New Format Cannibalization',body:'A new ad format wins auctions with a higher bid x pCTR score, displacing the old format. But actual CTR is much lower — fewer clicks per impression despite higher CPC.<br/><br/><strong>Actions:</strong> Recalibrate pCTR model; apply score discount; use RPM as north star; run holdout experiment to confirm causal attribution.'},
-  r_traffic_loss:{result:true,title:'Root Cause: Platform Traffic Decline',body:'Overall user traffic is down. Could be seasonal, a product change reducing ad inventory, or an external event.<br/><br/><strong>Actions:</strong> Check DAU/session metrics, compare to same period last year, check if surface changes reduced ad slots.'},
+  r_traffic_loss:{result:true,title:'Root Cause: Platform Traffic Decline',body:'Overall user traffic is down — seasonal, a product change reducing ad inventory, or an external event.<br/><br/><strong>Actions:</strong> Check DAU/session metrics, compare to same period last year, check if surface changes reduced ad slots.'},
   r_surface_issue:{result:true,title:'Root Cause: Surface-Specific Issue',body:'A specific surface, geography, or user segment lost impressions — suggests a targeting, eligibility, or product rollout issue.<br/><br/><strong>Actions:</strong> Slice impressions by surface x country x ad_format. Identify the outlier segment.'},
   r_creative_decay:{result:true,title:'Root Cause: Creative or Audience Fatigue',body:'CTR fell without a format change — ad creatives are stale or audience targeting has drifted.<br/><br/><strong>Actions:</strong> Check impression frequency per user, refresh creative assets, review audience targeting overlap.'},
   r_need_format_data:{result:true,title:'Action Needed: Get Format-Level Data',body:'Trace back to raw data. Reconstruct the auction-level dataset (join auction_log + impression_log + ad_dim) and segment CTR by ad_format x surface. Look for format mix shifts over time.'},
-  r_auction_pressure:{result:true,title:'Root Cause: Reduced Auction Competition',body:'Fewer advertisers or lower bids reduce the auction clearing price.<br/><br/><strong>Actions:</strong> Check auction fill rate, average bidders per auction, whether large advertisers reduced spend. Consider expanding supply or adjusting floor prices.'},
-  r_pctrl_inflate:{result:true,title:'Root Cause: pCTR Model Drift',body:'pCTR was overestimated then corrected downward, lowering scores and prices. Or a model update changed calibration.<br/><br/><strong>Actions:</strong> Compare pCTR vs actual CTR over time. Review recent model updates.'}
+  r_auction_pressure:{result:true,title:'Root Cause: Reduced Auction Competition',body:'Fewer advertisers or lower bids reduce the auction clearing price.<br/><br/><strong>Actions:</strong> Check auction fill rate, average bidders per auction, whether large advertisers reduced spend.'},
+  r_pctrl_inflate:{result:true,title:'Root Cause: pCTR Model Drift',body:'pCTR was overestimated then corrected downward, lowering scores and prices.<br/><br/><strong>Actions:</strong> Compare pCTR vs actual CTR over time. Review recent model updates.'}
 };
 
 function renderDiag(nodeId){
@@ -410,10 +401,10 @@ function renderDiag(nodeId){
   if(node.result){
     el.innerHTML='<div class="diag-result"><div class="res-title">'+node.title+'</div><div style="font-size:.88rem;color:var(--text-muted);line-height:1.7">'+node.body+'</div></div><div class="diag-back" onclick="renderDiag(\'start\')">&#8592; Start over</div>';
   }else{
-    el.innerHTML='<div class="diag-q">'+node.q+'</div><div class="diag-options">'+node.opts.map(o=>'<button class="diag-btn" onclick="renderDiag(\''+o.next+'\')">' +o.label+'</button>').join('')+'</div>'+(nodeId!=='start'?'<div class="diag-back" onclick="renderDiag(\'start\')">&#8592; Start over</div>':'');
+    el.innerHTML='<div class="diag-q">'+node.q+'</div><div class="diag-options">'+node.opts.map(o=>'<button class="diag-btn" onclick="renderDiag(\''+o.next+'\')">'+o.label+'</button>').join('')+'</div>'+(nodeId!=='start'?'<div class="diag-back" onclick="renderDiag(\'start\')">&#8592; Start over</div>':'');
   }
 }
 renderDiag('start');
-<\/script>
+</script>
 </body>
 </html>
